@@ -42,7 +42,7 @@ pil_to_tensor = standard_transforms.ToTensor()
 
 dataRoot = '../ProcessedData/shanghaitech_part_B/test'
 
-model_path = 'xxx.pth'
+model_path = 'exp/03-20_05-18_SHHB_VGG_1e-05_laplace/all_ep_88_mae_9.3_mse_14.1.pth'
 
 def main():
     
@@ -65,7 +65,7 @@ def test(file_list, model_path):
     preds = []
 
     for filename in file_list:
-    	print( filename )
+        print( filename )
         imgname = dataRoot + '/img/' + filename
         filename_no_ext = filename.split('.')[0]
 
@@ -94,6 +94,8 @@ def test(file_list, model_path):
 
 
         pred = np.sum(pred_map)/100.0
+        gts.append(gt)
+        preds.append(pred)
         pred_map = pred_map/np.max(pred_map+1e-20)
         
         den = den/np.max(den+1e-20)
@@ -146,8 +148,16 @@ def test(file_list, model_path):
         plt.close()
 
         # sio.savemat(exp_name+'/'+filename_no_ext+'_diff.mat',{'data':diff})
-                     
 
+    gts = np.array(gts)
+    preds = np.array(preds)
+    mae = np.mean(np.abs(gts - preds))
+    mse = np.sqrt(np.mean((gts - preds) ** 2))
+    print('=' * 40)
+    print(f'Test results on {len(gts)} images:')
+    print(f'  MAE : {mae:.2f}')
+    print(f'  MSE : {mse:.2f}')
+    print('=' * 40)
 
 
 if __name__ == '__main__':
