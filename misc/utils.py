@@ -15,6 +15,19 @@ import torchvision.transforms as standard_transforms
 import pdb
 
 
+def get_device():
+    """Return the best available device: CUDA > MPS > CPU."""
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    return torch.device('cpu')
+
+# Single shared device object used across the entire project.
+# Imported by all trainers via `from misc.utils import *`.
+device = get_device()
+
+
 def initialize_weights(models):
     for model in models:
         real_init_weights(model)

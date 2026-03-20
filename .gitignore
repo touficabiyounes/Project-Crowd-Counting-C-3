@@ -106,3 +106,4 @@ venv.bak/
 *.pyc
 exp/
 backup_exp/
+.idea/

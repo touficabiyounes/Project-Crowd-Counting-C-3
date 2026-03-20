@@ -22,8 +22,12 @@ class Trainer():
         self.pwd = pwd
 
         self.net_name = cfg.NET
-        self.net = CrowdCounter(cfg.GPU_ID,self.net_name).cuda()
-        self.optimizer = optim.Adam(self.net.CCN.parameters(), lr=cfg.LR, weight_decay=1e-4)
+        self.net = CrowdCounter(cfg.GPU_ID,self.net_name).to(device)
+
+        optim_params = list(self.net.CCN.parameters())
+        if hasattr(self.net, 'log_var_head'):
+            optim_params += list(self.net.log_var_head.parameters())
+        self.optimizer = optim.Adam(optim_params, lr=cfg.LR, weight_decay=1e-4)
         # self.optimizer = optim.SGD(self.net.parameters(), cfg.LR, momentum=0.95,weight_decay=5e-4)
         self.scheduler = StepLR(self.optimizer, step_size=cfg.NUM_EPOCH_LR_DECAY, gamma=cfg.LR_DECAY)          
 
@@ -73,9 +77,9 @@ class Trainer():
                 self.timer['val time'].tic()
                 if self.data_mode in ['SHHA', 'SHHB', 'QNRF', 'UCF50']:
                     self.validate_V1()
-                elif self.data_mode is 'WE':
+                elif self.data_mode == 'WE':
                     self.validate_V2()
-                elif self.data_mode is 'GCC':
+                elif self.data_mode == 'GCC':
                     self.validate_V3()
                 self.timer['val time'].toc(average=False)
                 print( 'val time: {:.2f}s'.format(self.timer['val time'].diff) )
@@ -86,8 +90,8 @@ class Trainer():
         for i, data in enumerate(self.train_loader, 0):
             self.timer['iter time'].tic()
             img, gt_map = data
-            img = Variable(img).cuda()
-            gt_map = Variable(gt_map).cuda()
+            img = Variable(img).to(device)
+            gt_map = Variable(gt_map).to(device)
 
             self.optimizer.zero_grad()
             pred_map = self.net(img, gt_map)
@@ -98,10 +102,17 @@ class Trainer():
             if (i + 1) % cfg.PRINT_FREQ == 0:
                 self.i_tb += 1
                 self.writer.add_scalar('train_loss', loss.item(), self.i_tb)
+
+                if hasattr(self.net, 'log_var_map'):
+                    mean_log_var = self.net.log_var_map.mean().item()
+                    mean_var = float(torch.exp(self.net.log_var_map).mean().item())
+                    self.writer.add_scalar('train_mean_log_var', mean_log_var, self.i_tb)
+                    self.writer.add_scalar('train_mean_var', mean_var, self.i_tb)
+
                 self.timer['iter time'].toc(average=False)
                 print( '[ep %d][it %d][loss %.4f][lr %.4f][%.2fs]' % \
                         (self.epoch + 1, i + 1, loss.item(), self.optimizer.param_groups[0]['lr']*10000, self.timer['iter time'].diff) )
-                print( '        [cnt: gt: %.1f pred: %.2f]' % (gt_map[0].sum().data/self.cfg_data.LOG_PARA, pred_map[0].sum().data/self.cfg_data.LOG_PARA) )           
+                print( '        [cnt: gt: %.1f pred: %.2f]' % (gt_map[0].sum().data/self.cfg_data.LOG_PARA, pred_map[0].sum().data/self.cfg_data.LOG_PARA) )
 
 
     def validate_V1(self):# validate_V1 for SHHA, SHHB, UCF-QNRF, UCF50
@@ -116,8 +127,8 @@ class Trainer():
             img, gt_map = data
 
             with torch.no_grad():
-                img = Variable(img).cuda()
-                gt_map = Variable(gt_map).cuda()
+                img = Variable(img).to(device)
+                gt_map = Variable(gt_map).to(device)
 
                 pred_map = self.net.forward(img,gt_map)
 
@@ -170,8 +181,8 @@ class Trainer():
                 img, gt_map = data
 
                 with torch.no_grad():
-                    img = Variable(img).cuda()
-                    gt_map = Variable(gt_map).cuda()
+                    img = Variable(img).to(device)
+                    gt_map = Variable(gt_map).to(device)
 
                     pred_map = self.net.forward(img,gt_map)
 
@@ -223,8 +234,8 @@ class Trainer():
             img, gt_map, attributes_pt = data
 
             with torch.no_grad():
-                img = Variable(img).cuda()
-                gt_map = Variable(gt_map).cuda()
+                img = Variable(img).to(device)
+                gt_map = Variable(gt_map).to(device)
 
 
                 pred_map = self.net.forward(img,gt_map)

@@ -44,7 +44,7 @@ class Trainer():
             
             loss_2_fn = nn.BCELoss(weight=ce_weights)
 
-        self.net = CrowdCounter(cfg.GPU_ID, self.net_name,loss_1_fn,loss_2_fn).cuda()
+        self.net = CrowdCounter(cfg.GPU_ID, self.net_name,loss_1_fn,loss_2_fn).to(device)
         self.optimizer = optim.Adam(self.net.CCN.parameters(), lr=cfg.LR, weight_decay=1e-4)
         # self.optimizer = optim.SGD(self.net.parameters(), cfg.LR, momentum=0.95,weight_decay=5e-4)
         self.scheduler = StepLR(self.optimizer, step_size=cfg.NUM_EPOCH_LR_DECAY, gamma=cfg.LR_DECAY)
@@ -163,11 +163,11 @@ class Trainer():
             # train net
             self.timer['iter time'].tic()
             img, gt_map = data
-            img = Variable(img).cuda()
-            gt_map = Variable(gt_map).cuda()
+            img = Variable(img).to(device)
+            gt_map = Variable(gt_map).to(device)
 
             gt_label = self.online_assign_gt_class_labels(gt_map)
-            gt_label = Variable(gt_label).cuda()
+            gt_label = Variable(gt_label).to(device)
             
 
             self.optimizer.zero_grad()
@@ -201,11 +201,11 @@ class Trainer():
             img, gt_map = data
 
             with torch.no_grad():
-                img = Variable(img).cuda()
-                gt_map = Variable(gt_map).cuda()
+                img = Variable(img).to(device)
+                gt_map = Variable(gt_map).to(device)
 
                 gt_label = self.online_assign_gt_class_labels(gt_map)
-                gt_label = Variable(gt_label).cuda()
+                gt_label = Variable(gt_label).to(device)
 
                 pred_map = self.net.forward(img, gt_map, gt_label)
 
@@ -250,8 +250,8 @@ class Trainer():
                 img, gt_map = data
 
                 with torch.no_grad():
-                    img = Variable(img).cuda()
-                    gt_map = Variable(gt_map).cuda()
+                    img = Variable(img).to(device)
+                    gt_map = Variable(gt_map).to(device)
 
                     pred_map = self.net.forward(img, gt_map)
 
@@ -294,8 +294,8 @@ class Trainer():
         for vi, data in enumerate(self.val_loader, 0):
             img, gt_map, attributes_pt = data
             with torch.no_grad():
-                img = Variable(img).cuda()
-                gt_map = Variable(gt_map).cuda()
+                img = Variable(img).to(device)
+                gt_map = Variable(gt_map).to(device)
 
                 pred_map = self.net.forward(img, gt_map)
 

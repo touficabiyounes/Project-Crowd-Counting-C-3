@@ -15,8 +15,9 @@ from misc.utils import *
 import scipy.io as sio
 from PIL import Image, ImageOps
 
-torch.cuda.set_device(0)
-torch.backends.cudnn.benchmark = True
+if torch.cuda.is_available():
+    torch.cuda.set_device(0)
+    torch.backends.cudnn.benchmark = True
 
 exp_name = '../SHHB_results'
 if not os.path.exists(exp_name):
@@ -53,8 +54,8 @@ def main():
 def test(file_list, model_path):
 
     net = CrowdCounter(cfg.GPU_ID,cfg.NET)
-    net.load_state_dict(torch.load(model_path))
-    net.cuda()
+    net.load_state_dict(torch.load(model_path, map_location=device))
+    net.to(device)
     net.eval()
 
 
@@ -83,7 +84,7 @@ def test(file_list, model_path):
 
         gt = np.sum(den)
         with torch.no_grad():
-            img = Variable(img[None,:,:,:]).cuda()
+            img = Variable(img[None,:,:,:]).to(device)
             pred_map = net.test_forward(img)
 
         sio.savemat(exp_name+'/pred/'+filename_no_ext+'.mat',{'data':pred_map.squeeze().cpu().numpy()/100.})

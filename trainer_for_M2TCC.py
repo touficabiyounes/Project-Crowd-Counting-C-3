@@ -28,7 +28,7 @@ class Trainer():
             from misc import pytorch_ssim
             loss_2_fn = pytorch_ssim.SSIM(window_size=11)
 
-        self.net = CrowdCounter(cfg.GPU_ID,self.net_name,loss_1_fn,loss_2_fn).cuda()
+        self.net = CrowdCounter(cfg.GPU_ID,self.net_name,loss_1_fn,loss_2_fn).to(device)
         self.optimizer = optim.Adam(self.net.CCN.parameters(), lr=cfg.LR, weight_decay=1e-4)
         # self.optimizer = optim.SGD(self.net.parameters(), cfg.LR, momentum=0.95,weight_decay=5e-4)
         self.scheduler = StepLR(self.optimizer, step_size=cfg.NUM_EPOCH_LR_DECAY, gamma=cfg.LR_DECAY)          
@@ -93,8 +93,8 @@ class Trainer():
         for i, data in enumerate(self.train_loader, 0):
             self.timer['iter time'].tic()
             img, gt_map = data
-            img = Variable(img).cuda()
-            gt_map = Variable(gt_map).cuda()
+            img = Variable(img).to(device)
+            gt_map = Variable(gt_map).to(device)
 
             self.optimizer.zero_grad()
             pred_map = self.net(img, gt_map)
@@ -130,8 +130,8 @@ class Trainer():
 
 
             with torch.no_grad():
-                img = Variable(img).cuda()
-                gt_map = Variable(gt_map).cuda()
+                img = Variable(img).to(device)
+                gt_map = Variable(gt_map).to(device)
 
                 pred_map = self.net.forward(img,gt_map)
 
@@ -177,8 +177,8 @@ class Trainer():
                 img, gt_map = data
 
                 with torch.no_grad():
-                    img = Variable(img).cuda()
-                    gt_map = Variable(gt_map).cuda()
+                    img = Variable(img).to(device)
+                    gt_map = Variable(gt_map).to(device)
 
                     pred_map = self.net.forward(img,gt_map)
 
@@ -222,8 +222,8 @@ class Trainer():
             img, gt_map, attributes_pt = data
 
             with torch.no_grad():
-                img = Variable(img).cuda()
-                gt_map = Variable(gt_map).cuda()
+                img = Variable(img).to(device)
+                gt_map = Variable(gt_map).to(device)
 
 
                 pred_map = self.net.forward(img,gt_map)

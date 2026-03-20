@@ -5,6 +5,7 @@ import numpy as np
 import pdb
 
 from config import cfg
+from misc.utils import device
 
 
 class CrowdCounter(nn.Module):
@@ -14,12 +15,12 @@ class CrowdCounter(nn.Module):
             from M2T2OCC_Model.CMTL import CMTL as net  
 
         self.CCN = net()
-        if len(gpus) > 1:
-            self.CCN = torch.nn.DataParallel(self.CCN, device_ids=gpus).cuda()
+        if len(gpus) > 1 and device.type == 'cuda':
+            self.CCN = torch.nn.DataParallel(self.CCN, device_ids=gpus).to(device)
         else:
-            self.CCN = self.CCN.cuda()
-        self.loss_mse_fn = loss_1_fn.cuda()
-        self.loss_bce_fn = loss_2_fn.cuda()
+            self.CCN = self.CCN.to(device)
+        self.loss_mse_fn = loss_1_fn.to(device)
+        self.loss_bce_fn = loss_2_fn.to(device)
 
     @property
     def loss(self):
