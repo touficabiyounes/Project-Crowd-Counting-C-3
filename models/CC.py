@@ -40,7 +40,6 @@ class CrowdCounter(nn.Module):
         output = self.CCN(img)
 
         if isinstance(output, tuple):
-            print('############################### use uncertainty loss ###############################################')
             mu, b = output
             if cfg.LOSS == 'laplace':
                 self.loss_mse = self.build_laplace_loss(mu.squeeze(), b.squeeze(), gt_map.squeeze())
