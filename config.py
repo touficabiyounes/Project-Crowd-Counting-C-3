@@ -20,7 +20,9 @@ if __C.DATASET == 'GCC':# only for GCC
 	__C.VAL_MODE = cfg_data.VAL_MODE 
 
 
-__C.NET = 'Res101_SFCN' # net selection: MCNN, AlexNet, VGG, VGG_DECODER, Res50, CSRNet, SANet
+__C.NET = 'VGG' # net selection: MCNN, AlexNet, VGG, VGG_DECODER, Res50, CSRNet, SANet
+
+__C.LOSS_TYPE = 'laplace' # loss selection: 'mse', 'gaussian', 'laplace'
 
 __C.PRE_GCC = False # use the pretrained model on GCC dataset
 __C.PRE_GCC_MODEL = 'path to model' # path to model
@@ -28,14 +30,14 @@ __C.PRE_GCC_MODEL = 'path to model' # path to model
 __C.RESUME = False # contine training
 __C.RESUME_PATH = './exp/04-25_09-19_SHHB_VGG_1e-05/latest_state.pth' # 
 
-__C.GPU_ID = [0,1] # sigle gpu: [0], [1] ...; multi gpus: [0,1]
+__C.GPU_ID = [0] # sigle gpu: [0], [1] ...; multi gpus: [0,1]
 
 # learning rate settings
 __C.LR = 1e-5 # learning rate
 __C.LR_DECAY = 0.995 # decay rate
 __C.LR_DECAY_START = -1 # when training epoch is more than it, the learning rate will be begin to decay
 __C.NUM_EPOCH_LR_DECAY = 1 # decay frequency
-__C.MAX_EPOCH = 200
+__C.MAX_EPOCH = 100
 
 # multi-task learning weights, no use for single model, such as MCNN, VGG, VGG_DECODER, Res50, CSRNet, and so on
 
@@ -50,7 +52,8 @@ now = time.strftime("%m-%d_%H-%M", time.localtime())
 __C.EXP_NAME = now \
 			 + '_' + __C.DATASET \
              + '_' + __C.NET \
-             + '_' + str(__C.LR)
+             + '_' + str(__C.LR) \
+             + '_' + __C.LOSS_TYPE
 
 if __C.DATASET == 'UCF50':
 	__C.EXP_NAME += '_' + str(__C.VAL_INDEX)	
