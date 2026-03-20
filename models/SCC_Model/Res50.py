@@ -6,6 +6,7 @@ from misc.layer import Conv2d, FC
 
 import torch.nn.functional as F
 from misc.utils import *
+from config import cfg
 
 import pdb
 
@@ -14,9 +15,14 @@ import pdb
 class Res50(nn.Module):
     def __init__(self,  pretrained=True):
         super(Res50, self).__init__()
+        self.use_uncertainty = cfg.LOSS in ['gaussian', 'laplace']
 
         self.de_pred = nn.Sequential(Conv2d(1024, 128, 1, same_padding=True, NL='relu'),
                                      Conv2d(128, 1, 1, same_padding=True, NL='relu'))
+
+        if self.use_uncertainty:
+            self.log_var = nn.Sequential(Conv2d(1024, 128, 1, same_padding=True, NL='relu'),
+                                         Conv2d(128, 1, 1, same_padding=True, NL=None))
 
         initialize_weights(self.modules())
 
@@ -26,23 +32,25 @@ class Res50(nn.Module):
         self.frontend = nn.Sequential(
             res.conv1, res.bn1, res.relu, res.maxpool, res.layer1, res.layer2
         )
-        self.own_reslayer_3 = make_res_layer(Bottleneck, 256, 6, stride=1)        
+        self.own_reslayer_3 = make_res_layer(Bottleneck, 256, 6, stride=1)
         self.own_reslayer_3.load_state_dict(res.layer3.state_dict())
 
-        
 
-
-    def forward(self,x):
-
-        
+    def forward(self, x):
         x = self.frontend(x)
-
         x = self.own_reslayer_3(x)
 
-        x = self.de_pred(x)
+        mu = self.de_pred(x)
+        mu = F.interpolate(mu, scale_factor=8)
 
-        x = F.interpolate(x,scale_factor=8)
-        return x
+        if not self.use_uncertainty:
+            return mu
+
+        log_b = self.log_var(x)
+        log_b = torch.clamp(log_b, min=-7.0, max=2.0)
+        b = torch.exp(log_b)
+        b = F.interpolate(b, scale_factor=8, mode='bilinear', align_corners=False)
+        return mu, b
 
     def _initialize_weights(self):
         for m in self.modules():
