@@ -22,7 +22,7 @@ if __C.DATASET == 'GCC':# only for GCC
 
 __C.NET = 'VGG' # net selection: MCNN, AlexNet, VGG, VGG_DECODER, Res50, CSRNet, SANet
 
-__C.LOSS = 'mse' # loss function: 'mse', 'gaussian_nll', 'laplace_nll'
+__C.LOSS = 'laplace' # loss function: 'mse', 'gaussian', 'laplace'
 
 __C.PRE_GCC = False # use the pretrained model on GCC dataset
 __C.PRE_GCC_MODEL = 'path to model' # path to model

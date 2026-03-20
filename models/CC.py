@@ -28,68 +28,47 @@ class CrowdCounter(nn.Module):
 
         self.CCN = net()
         if len(gpus) > 1 and device.type == 'cuda':
-            self.CCN = torch.nn.DataParallel(self.CCN, device_ids=gpus).to(device)
-        else:
-            self.CCN = self.CCN.to(device)
-
-        # Which loss to use (set in config.py via cfg.LOSS)
-        self.loss_type = cfg.LOSS if hasattr(cfg, 'LOSS') else 'mse'
-
+            self.CCN = torch.nn.DataParallel(self.CCN, device_ids=gpus)
+        self.CCN = self.CCN.to(device)
         self.loss_mse_fn = nn.MSELoss().to(device)
-
-        if self.loss_type in ('gaussian_nll', 'laplace_nll'):
-            self.log_var_head = nn.Sequential(
-                nn.Conv2d(1, 16, kernel_size=3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(16, 1, kernel_size=1),
-            ).to(device)
-            # Initialise with near-zero weights so training starts close to MSE behavior
-            for m in self.log_var_head.modules():
-                if isinstance(m, nn.Conv2d):
-                    nn.init.normal_(m.weight, std=0.01)
-                    if m.bias is not None:
-                        nn.init.constant_(m.bias, 0)
 
     @property
     def loss(self):
         return self.loss_mse
 
     def forward(self, img, gt_map):
-        density_map = self.CCN(img) # [B, 1, H, W]
-        self.loss_mse = self.build_loss(density_map, gt_map)
-        return density_map
+        output = self.CCN(img)
+
+        if isinstance(output, tuple):
+            mu, b = output
+            if cfg.LOSS_TYPE == 'laplace':
+                self.loss_mse = self.build_laplace_loss(mu.squeeze(), b.squeeze(), gt_map.squeeze())
+            elif cfg.LOSS_TYPE == 'gaussian':
+                self.loss_mse = self.build_gaussian_loss(mu.squeeze(), b.squeeze(), gt_map.squeeze())
+            else:
+                self.loss_mse = self.build_loss(mu.squeeze(), gt_map.squeeze())
+            return mu
+        else:
+            density_map = output
+            self.loss_mse = self.build_loss(density_map.squeeze(), gt_map.squeeze())
+            return density_map
 
     def build_loss(self, density_map, gt_data):
-        """
-        Three loss modes:
+        return self.loss_mse_fn(density_map, gt_data)
 
-        'mse'          – standard pixel-wise MSE, identical to the original code.
-        'gaussian_nll' – heteroscedastic Gaussian NLL from Kendall & Gal (2017).
-                         The network additionally predicts s = log σ² per pixel.
-                         L = 0.5 * exp(-s) * (μ - y)² + 0.5 * s
-        'laplace_nll'  – heteroscedastic Laplace NLL from Kendall & Gal (2017).
-                         s = log b (log scale of the Laplace distribution).
-                         L = exp(-s) * |μ - y| + s
-        """
-        if self.loss_type == 'mse':
-            return self.loss_mse_fn(density_map.squeeze(), gt_data.squeeze())
+    def build_laplace_loss(self, mu, b, gt_data):
+        laplace = torch.mean(torch.log(b) + torch.abs(gt_data - mu) / b)
+        count_loss = torch.abs(mu.sum() - gt_data.sum()) / (gt_data.sum() + 1)
+        return laplace + count_loss
 
-        log_var = self.log_var_head(density_map.detach())
-        log_var = torch.clamp(log_var, min=-10.0, max=10.0)
-
-        self.log_var_map = log_var.detach()
-
-        diff = density_map - gt_data
-
-        if self.loss_type == 'gaussian_nll':
-            loss = 0.5 * torch.exp(-log_var) * diff.pow(2) + 0.5 * log_var
-
-        elif self.loss_type == 'laplace_nll':
-            loss = torch.exp(-log_var) * diff.abs() + log_var
-
-        aux_mse = self.loss_mse_fn(density_map.squeeze(), gt_data.squeeze())
-        return loss.mean() + 0.5 * aux_mse
+    def build_gaussian_loss(self, mu, b, gt_data):
+        gaussian = nn.GaussianNLLLoss(reduction='mean')(mu, gt_data, b)
+        count_loss = torch.abs(mu.sum() - gt_data.sum()) / (gt_data.sum() + 1)
+        return gaussian + count_loss
 
     def test_forward(self, img):
-        density_map = self.CCN(img)
-        return density_map
+        output = self.CCN(img)
+        if isinstance(output, tuple):
+            mu, _ = output
+            return mu
+        return output
