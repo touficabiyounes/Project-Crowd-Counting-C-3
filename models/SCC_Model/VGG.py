@@ -33,5 +33,5 @@ class VGG(nn.Module):
         log_b = self.log_var(x)
         log_b = torch.clamp(log_b, min=-7.0, max=2.0)
         b = torch.exp(log_b)
-        b = F.interpolate(b, scale_factor=8, mode='bilinear', align_corners=False)
+        b = F.interpolate(b, scale_factor=8)
         return mu, b
