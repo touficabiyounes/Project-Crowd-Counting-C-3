@@ -42,9 +42,9 @@ class CrowdCounter(nn.Module):
         if isinstance(output, tuple):
             print('############################### use uncertainty loss ###############################################')
             mu, b = output
-            if cfg.LOSS_TYPE == 'laplace':
+            if cfg.LOSS == 'laplace':
                 self.loss_mse = self.build_laplace_loss(mu.squeeze(), b.squeeze(), gt_map.squeeze())
-            elif cfg.LOSS_TYPE == 'gaussian':
+            elif cfg.LOSS == 'gaussian':
                 self.loss_mse = self.build_gaussian_loss(mu.squeeze(), b.squeeze(), gt_map.squeeze())
             else:
                 self.loss_mse = self.build_loss(mu.squeeze(), gt_map.squeeze())
