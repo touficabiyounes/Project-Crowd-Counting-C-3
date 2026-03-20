@@ -24,12 +24,14 @@ class VGG(nn.Module):
 
     def forward(self, x):
         x = self.features4(x)
-        mu = F.softplus(self.de_pred(x))
-        mu = F.interpolate(mu, scale_factor=8, mode='bilinear', align_corners=False)
+        mu = self.de_pred(x)
+        mu = F.interpolate(mu, scale_factor=8)
 
         if not self.use_uncertainty:
             return mu
         
-        b = F.softplus(self.log_var(x)) + 1e-3
+        log_b = self.log_var(x)
+        log_b = torch.clamp(log_b, min=-7.0, max=2.0)
+        b = torch.exp(log_b)
         b = F.interpolate(b, scale_factor=8, mode='bilinear', align_corners=False)
         return mu, b
