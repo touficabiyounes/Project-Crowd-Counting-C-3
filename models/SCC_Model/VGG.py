@@ -27,6 +27,6 @@ class VGG(nn.Module):
         x = self.features4(x)       
         x = self.de_pred(x)
 
-        x = F.upsample(x,scale_factor=8)
+        x = F.interpolate(x,scale_factor=8)
 
         return x

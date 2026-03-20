@@ -74,7 +74,7 @@ class CrowdCounter(nn.Module):
         if self.loss_type == 'mse':
             return self.loss_mse_fn(density_map.squeeze(), gt_data.squeeze())
 
-        log_var = self.log_var_head(density_map)
+        log_var = self.log_var_head(density_map.detach())
         log_var = torch.clamp(log_var, min=-10.0, max=10.0)
 
         self.log_var_map = log_var.detach()
@@ -87,7 +87,8 @@ class CrowdCounter(nn.Module):
         elif self.loss_type == 'laplace_nll':
             loss = torch.exp(-log_var) * diff.abs() + log_var
 
-        return loss.mean()
+        aux_mse = self.loss_mse_fn(density_map.squeeze(), gt_data.squeeze())
+        return loss.mean() + 0.5 * aux_mse
 
     def test_forward(self, img):
         density_map = self.CCN(img)
